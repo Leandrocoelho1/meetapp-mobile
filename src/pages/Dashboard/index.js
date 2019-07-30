@@ -49,6 +49,7 @@ export default function Dashboard() {
           setLastPageReached(true);
         }
       } else {
+        setLoading(false);
         setLastPageReached(true);
       }
     }

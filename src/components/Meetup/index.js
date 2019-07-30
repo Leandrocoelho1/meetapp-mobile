@@ -2,7 +2,9 @@ import React, { useMemo } from 'react';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { format, parseISO } from 'date-fns';
 import pt from 'date-fns/locale/pt';
+import DeviceInfo from 'react-native-device-info';
 
+import { parseFromTimeZone } from 'date-fns-timezone';
 import {
   Container,
   Content,
@@ -15,12 +17,13 @@ import {
 
 export default function Meetup({ meetup, onAction, buttonText }) {
   const { date } = meetup;
-  // const userTimezone = DeviceInfo.getTimezone();
-  // const timeZonedDate = utcToZonedTime(date, userTimezone);
-
+  const userTimezone = DeviceInfo.getTimezone();
+  const timeZonedDate = parseFromTimeZone(parseISO(date), {
+    timeZone: userTimezone
+  });
   const formattedDate = useMemo(
-    () => format(parseISO(date), "d' de 'MMMM', às 'k'h'", { locale: pt }),
-    [date]
+    () => format(timeZonedDate, "d' de 'MMMM', às 'k'h'", { locale: pt }),
+    [timeZonedDate]
   );
 
   return (
@@ -29,7 +32,7 @@ export default function Meetup({ meetup, onAction, buttonText }) {
         source={{
           uri: meetup.banner
             ? meetup.banner.url
-            : `https://api.adorable.io/avatar/50/${data.provider.name}.png`
+            : `https://api.adorable.io/avatar/50/leandro.png`
         }}
       />
       <Content>

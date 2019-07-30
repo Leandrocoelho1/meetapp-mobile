@@ -24,7 +24,7 @@ export default function Subscriptions() {
 
   async function handleCancellation(id) {
     try {
-      await api.delete(`subcriptions/${id}`);
+      await api.delete(`subscriptions/${id}`);
       const updatedSubscriptions = [...subscriptions];
       const index = updatedSubscriptions.findIndex(sub => sub.id === id);
       updatedSubscriptions.splice(index, 1);
