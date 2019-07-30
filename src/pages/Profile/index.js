@@ -9,7 +9,6 @@ import { updateProfileRequest } from '~/store/modules/user/actions';
 
 import {
   Container,
-  Title,
   Separator,
   Form,
   FormInput,
