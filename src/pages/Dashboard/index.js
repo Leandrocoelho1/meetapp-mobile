@@ -101,8 +101,6 @@ export default function Dashboard() {
           </TouchableOpacity>
         </DateSelector>
 
-        {/* { meetups ? } */}
-
         <MeetupList
           data={meetups}
           keyExtractor={item => String(item.id)}

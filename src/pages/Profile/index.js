@@ -19,6 +19,7 @@ import {
 export default function Profile() {
   const dispatch = useDispatch();
   const profile = useSelector(state => state.userReducer.profile);
+  const loading = useSelector(state => state.userReducer.loading);
 
   const emailRef = useRef();
   const oldPasswordRef = useRef();
@@ -118,7 +119,9 @@ export default function Profile() {
             onChangeText={setConfirmPassword}
           />
 
-          <SubmitButton onPress={handleSubmit}>Salvar perfil</SubmitButton>
+          <SubmitButton loading={loading} onPress={handleSubmit}>
+            Salvar perfil
+          </SubmitButton>
           <LogoutButton onPress={handleLogout}>Sair do MeetApp</LogoutButton>
         </Form>
       </Container>
