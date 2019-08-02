@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { withNavigationFocus } from 'react-navigation';
 
 import api from '~/services/api';
 
 import Background from '~/components/Background';
-import { Container, MeetupList } from './styles';
+import {
+  Container,
+  MeetupList,
+  PlaceholderContainer,
+  PlaceholderText
+} from './styles';
 import Header from '~/components/Header';
 import Meetup from '~/components/Meetup';
 
-export default function Subscriptions() {
+function Subscriptions({ isFocused }) {
   const [subscriptions, setSubscriptions] = useState([]);
 
   useEffect(() => {
@@ -19,8 +25,10 @@ export default function Subscriptions() {
       setSubscriptions(response.data);
     }
 
-    loadMeetups();
-  }, []);
+    if (isFocused) {
+      loadMeetups();
+    }
+  }, [isFocused]);
 
   async function handleCancellation(id) {
     try {
@@ -43,19 +51,23 @@ export default function Subscriptions() {
       <Container>
         <Header />
 
-        {/* { meetups ? } */}
-
-        <MeetupList
-          data={subscriptions}
-          keyExtractor={item => String(item.id)}
-          renderItem={({ item }) => (
-            <Meetup
-              meetup={item.meetup}
-              onAction={() => handleCancellation(item.id)}
-              buttonText="Cancelar Inscrição"
-            />
-          )}
-        />
+        {subscriptions.length ? (
+          <MeetupList
+            data={subscriptions}
+            keyExtractor={item => String(item.id)}
+            renderItem={({ item }) => (
+              <Meetup
+                meetup={item.meetup}
+                onAction={() => handleCancellation(item.id)}
+                buttonText="Cancelar Inscrição"
+              />
+            )}
+          />
+        ) : (
+          <PlaceholderContainer>
+            <PlaceholderText>Você não tem inscrições.</PlaceholderText>
+          </PlaceholderContainer>
+        )}
       </Container>
     </Background>
   );
@@ -67,3 +79,5 @@ Subscriptions.navigationOptions = {
     <Icon name="local-offer" size={20} color={tintColor} />
   )
 };
+
+export default withNavigationFocus(Subscriptions);

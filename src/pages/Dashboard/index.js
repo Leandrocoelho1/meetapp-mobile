@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useReducer,
+  useCallback
+} from 'react';
 import { TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { format, subDays, addDays } from 'date-fns';
@@ -7,43 +13,61 @@ import pt from 'date-fns/locale/pt';
 import api from '~/services/api';
 
 import Background from '~/components/Background';
-import { Container, DateSelector, DateText, MeetupList } from './styles';
 import Header from '~/components/Header';
 import Meetup from '~/components/Meetup';
+import {
+  Container,
+  DateSelector,
+  DateText,
+  MeetupList,
+  PlaceholderContainer,
+  PlaceholderText
+} from './styles';
 
 export default function Dashboard() {
   const [date, setDate] = useState(new Date());
-  const [meetups, setMeetups] = useState([]);
   const [page, setPage] = useState(1);
+  const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastPageReached, setLastPageReached] = useState(false);
-  const [didMount, setDidMount] = useState(false);
+  const [meetups, dispatch] = useReducer(meetupReducer, []);
 
-  const formattedDate = useMemo(
-    () => format(date, "d ' de ' MMMM", { locale: pt }),
-    [date]
-  );
-
-  function handleSubDay() {
-    setDate(subDays(date, 1));
+  function meetupReducer(state, action) {
+    switch (action.type) {
+      case 'fetchMeetups': {
+        const newMeetups = [...action.payload];
+        return newMeetups;
+      }
+      case 'fetchMoreMeetups': {
+        const newMeetups = [...state, ...action.payload];
+        return newMeetups;
+      }
+      case 'clearMeetups': {
+        return [];
+      }
+      default:
+        return state;
+    }
   }
 
-  function handleAddDay() {
-    setDate(addDays(date, 1));
-  }
+  const getInitialMeetups = useCallback(async () => {
+    const queryDate = format(date, 'yyyy-MM-dd');
+    setUrl(`meetups?date=${queryDate}`);
+    const response = await api.get(`meetups?date=${queryDate}`);
+    if (response.data.length) {
+      dispatch({ type: 'fetchMeetups', payload: response.data });
+    }
+  }, [date]);
 
-  function handleScroll() {
-    if (lastPageReached || loading) return;
-    setLoading(true);
-    setPage(page + 1);
-  }
+  const getMoreMeetups = useCallback(
+    async previousUrl => {
+      if (page === 1) return;
 
-  useEffect(() => {
-    async function loadMore() {
-      const response = await api.get('meetups', { params: { date, page } });
+      const queryUrl = `${previousUrl}&page=${page}`;
+      const response = await api.get(queryUrl);
 
       if (response.data.length) {
-        setMeetups([...meetups, ...response.data]);
+        dispatch({ type: 'fetchMoreMeetups', payload: response.data });
         setLoading(false);
         if (response.data.length < 10) {
           setLastPageReached(true);
@@ -52,38 +76,55 @@ export default function Dashboard() {
         setLoading(false);
         setLastPageReached(true);
       }
-    }
-
-    if (didMount) {
-      loadMore();
-    }
-    // eslint-disable-next-line
-  }, [page]);
+    },
+    [page]
+  );
 
   useEffect(() => {
-    async function loadMeetups() {
-      const response = await api.get('meetups', { params: { date } });
+    getMoreMeetups(url);
+  }, [getMoreMeetups, url]);
 
-      setMeetups(response.data);
-      setDidMount(true);
-      setLastPageReached(false);
-      setPage(1);
-    }
+  useEffect(() => {
+    getInitialMeetups();
+  }, [getInitialMeetups]);
 
-    loadMeetups();
-  }, [date]);
+  const formattedDate = useMemo(
+    () => format(date, "d ' de ' MMMM", { locale: pt }),
+    [date]
+  );
+
+  function handleSubDay() {
+    dispatch({ type: 'clearMeetups' });
+    setDate(subDays(date, 1));
+    setLastPageReached(false);
+    setPage(1);
+  }
+
+  function handleAddDay() {
+    dispatch({ type: 'clearMeetups' });
+    setDate(addDays(date, 1));
+    setLastPageReached(false);
+    setPage(1);
+  }
+
+  function handleScroll() {
+    if (lastPageReached || loading) return;
+    setLoading(true);
+    setPage(page + 1);
+  }
 
   function renderLoader() {
     if (!loading) return null;
-
     return <ActivityIndicator size="small" color="#fff" />;
   }
 
   async function handleSubscription(id) {
-    const response = await api.post(`subscriptions/${id}`);
-    Alert.alert('Sucesso', 'Você se inscreveu para esse Meetup');
-
-    console.tron.warn(response.data);
+    try {
+      await api.post(`subscriptions/${id}`);
+      Alert.alert('Sucesso', 'Você se inscreveu para esse Meetup');
+    } catch (err) {
+      Alert.alert('Erro', 'Algo deu errado.');
+    }
   }
 
   return (
@@ -101,20 +142,26 @@ export default function Dashboard() {
           </TouchableOpacity>
         </DateSelector>
 
-        <MeetupList
-          data={meetups}
-          keyExtractor={item => String(item.id)}
-          renderItem={({ item }) => (
-            <Meetup
-              meetup={item}
-              onAction={() => handleSubscription(item.id)}
-              buttonText="Realizar Inscrição"
-            />
-          )}
-          onEndReached={handleScroll}
-          onEndReachedThreshold={0.2}
-          ListFooterComponent={renderLoader}
-        />
+        {meetups.length ? (
+          <MeetupList
+            data={meetups}
+            keyExtractor={item => String(item.id)}
+            renderItem={({ item }) => (
+              <Meetup
+                meetup={item}
+                onAction={() => handleSubscription(item.id)}
+                buttonText="Realizar Inscrição"
+              />
+            )}
+            onEndReached={handleScroll}
+            onEndReachedThreshold={0.2}
+            ListFooterComponent={renderLoader}
+          />
+        ) : (
+          <PlaceholderContainer>
+            <PlaceholderText>Nenhum Meetup nessa data.</PlaceholderText>
+          </PlaceholderContainer>
+        )}
       </Container>
     </Background>
   );

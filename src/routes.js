@@ -21,8 +21,8 @@ export default (isSigned = false) =>
         App: createBottomTabNavigator(
           {
             Dashboard,
-            Profile,
-            Subscriptions
+            Subscriptions,
+            Profile
           },
           {
             resetOnBlur: true,
